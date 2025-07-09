@@ -1,9 +1,24 @@
 import numpy as np
 from collections import Counter
 import random
+from config import CUSTOM_RF_PARAMS
 
 class DecisionTree:
     def __init__(self, max_depth=None, min_samples_split=2, min_samples_leaf=1, min_impurity_decrease=0.0):
+        """
+        Initialize a Decision Tree classifier.
+        
+        Parameters
+        ----------
+        max_depth : int or None, default=None
+            Maximum depth of the tree. None means unlimited depth.
+        min_samples_split : int, default=2
+            Minimum number of samples required to split an internal node.
+        min_samples_leaf : int, default=1
+            Minimum number of samples required to be at a leaf node.
+        min_impurity_decrease : float, default=0.0
+            Minimum impurity decrease required for a split.
+        """
         self.max_depth = max_depth
         self.min_samples_split = min_samples_split
         self.min_samples_leaf = min_samples_leaf
@@ -222,18 +237,44 @@ class DecisionTree:
         return np.array(predictions)
 
 class CustomRandomForest:
-    def __init__(self, n_estimators=100, max_depth=None, min_samples_split=2, 
-                 min_samples_leaf=1, max_features='sqrt', random_state=None,
-                 bootstrap=True, oob_score=False, class_weight=None):
-        self.n_estimators = n_estimators
-        self.max_depth = max_depth
-        self.min_samples_split = min_samples_split
-        self.min_samples_leaf = min_samples_leaf
-        self.max_features = max_features
-        self.random_state = random_state
-        self.bootstrap = bootstrap
-        self.oob_score = oob_score
-        self.class_weight = class_weight
+    def __init__(self, n_estimators=None, max_depth=None, min_samples_split=None, 
+                 min_samples_leaf=None, max_features=None, random_state=None,
+                 bootstrap=None, oob_score=None, class_weight=None):
+        """
+        Initialize a Custom Random Forest classifier.
+        
+        Parameters
+        ----------
+        n_estimators : int, default=250
+            Number of trees in the forest. Higher values improve robustness but increase computation time.
+        max_depth : int or None, default=20
+            Maximum depth of trees. None means unlimited depth. Lower values prevent overfitting.
+        min_samples_split : int, default=12
+            Minimum number of samples required to split an internal node.
+        min_samples_leaf : int, default=8
+            Minimum number of samples required to be at a leaf node.
+        max_features : {'sqrt', 'log2'} or int, default='sqrt'
+            Number of features to consider when looking for the best split.
+        random_state : int or None, default=42
+            Controls the randomness of the bootstrapping and feature selection.
+        bootstrap : bool, default=True
+            Whether to use bootstrap samples when building trees.
+        oob_score : bool, default=True
+            Whether to calculate out-of-bag score.
+        class_weight : {'balanced', None}, default='balanced'
+            Weights associated with classes. 'balanced' adjusts weights inversely proportional to class frequencies.
+        """
+        # Use parameters from config if not explicitly provided
+        self.n_estimators = n_estimators if n_estimators is not None else CUSTOM_RF_PARAMS['n_estimators']
+        self.max_depth = max_depth if max_depth is not None else CUSTOM_RF_PARAMS['max_depth']
+        self.min_samples_split = min_samples_split if min_samples_split is not None else CUSTOM_RF_PARAMS['min_samples_split']
+        self.min_samples_leaf = min_samples_leaf if min_samples_leaf is not None else CUSTOM_RF_PARAMS['min_samples_leaf']
+        self.max_features = max_features if max_features is not None else CUSTOM_RF_PARAMS['max_features']
+        self.random_state = random_state if random_state is not None else CUSTOM_RF_PARAMS['random_state']
+        self.bootstrap = bootstrap if bootstrap is not None else CUSTOM_RF_PARAMS['bootstrap']
+        self.oob_score = oob_score if oob_score is not None else CUSTOM_RF_PARAMS['oob_score']
+        self.class_weight = class_weight if class_weight is not None else CUSTOM_RF_PARAMS['class_weight']
+        
         self.trees = []
         self.feature_importances_ = None
         self.feature_names_ = None
@@ -241,9 +282,25 @@ class CustomRandomForest:
         self.n_classes_ = None
         self.classes_ = None
         
-        if random_state is not None:
-            random.seed(random_state)
-            np.random.seed(random_state)
+        if self.random_state is not None:
+            random.seed(self.random_state)
+            np.random.seed(self.random_state)
+            
+        # Validate parameters
+        self.validate_parameters()
+        
+    def validate_parameters(self):
+        """Validate model parameters"""
+        if self.n_estimators < 1:
+            raise ValueError("n_estimators must be greater than 0")
+        if self.max_depth is not None and self.max_depth < 1:
+            raise ValueError("max_depth must be greater than 0")
+        if self.min_samples_split < 2:
+            raise ValueError("min_samples_split must be at least 2")
+        if self.min_samples_leaf < 1:
+            raise ValueError("min_samples_leaf must be at least 1")
+        if self.max_features not in ['sqrt', 'log2'] and not isinstance(self.max_features, int):
+            raise ValueError("max_features must be 'sqrt', 'log2', or an integer")
 
     def _bootstrap_sample(self, X, y):
         """Create a bootstrap sample of the data"""

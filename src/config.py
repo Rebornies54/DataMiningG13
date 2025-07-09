@@ -29,6 +29,19 @@ MODEL_PARAMS = {
     }
 }
 
+# Custom Random Forest parameters
+CUSTOM_RF_PARAMS = {
+    'n_estimators': 300,
+    'max_depth': 20,
+    'min_samples_split': 5,
+    'min_samples_leaf': 2,
+    'max_features': 'sqrt',
+    'random_state': RANDOM_STATE,
+    'bootstrap': True,
+    'oob_score': True,
+    'class_weight': 'balanced_subsample'
+}
+
 # Feature lists
 CATEGORICAL_FEATURES = [
     'Gender',
@@ -72,7 +85,7 @@ CV_PARAMS = {
 
 # Feature engineering parameters
 FEATURE_ENGINEERING = {
-    'create_bmi': True,  # Create BMI feature from height and weight
-    'create_age_groups': True,  # Create age groups
-    'create_activity_score': True  # Create activity score from FAF and TUE
+    'create_bmi': True, 
+    'create_age_groups': True,  
+    'create_activity_score': True  
 } 

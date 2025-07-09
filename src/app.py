@@ -257,18 +257,8 @@ def train_custom_random_forest(X_train, y_train):
             progress_bar.progress(progress)
             status_text.text(f"Training progress: {int(progress * 100)}%")
         
-
-        model = CustomRandomForest(
-            n_estimators=100,      
-            max_depth=None,        
-            min_samples_split=2,   
-            min_samples_leaf=1,    
-            max_features='sqrt',   
-            random_state=42,
-            bootstrap=True,       
-            oob_score=False,       
-            class_weight='balanced' 
-        )
+        # Initialize model with parameters from config
+        model = CustomRandomForest()
         
         # Train the model with progress tracking
         model.fit(X_train, y_train, progress_callback=update_progress)
@@ -409,7 +399,37 @@ def get_prediction(input_data, model, label_encoders, scaler, confidence_thresho
         if bmi < 10 or bmi > 100:  # Unreasonable BMI range
             st.warning(f"Warning: Calculated BMI ({bmi:.1f}) is outside reasonable range (10-100). Please check height and weight values.")
         
-        # BMI-based validation
+        # Ensure all required features are present
+        required_features = CATEGORICAL_FEATURES + NUMERICAL_FEATURES
+        missing_features = [f for f in required_features if f not in input_df.columns]
+        if missing_features:
+            raise ValueError(f"Missing required features: {', '.join(missing_features)}")
+        
+        # Preprocess the input data
+        input_processed = preprocess_data(input_df, label_encoders, scaler, is_training=False)
+        
+        # Ensure input data is properly shaped
+        if len(input_processed.shape) == 1:
+            input_processed = input_processed.reshape(1, -1)
+        
+        # Get prediction and probabilities
+        try:
+            pred = model.predict(input_processed)[0]
+            pred_proba = model.predict_proba(input_processed)[0]
+        except AttributeError:
+            st.error("Model does not support probability estimation. Please use a different model.")
+            return None, None
+        except Exception as e:
+            st.error(f"Error during prediction: {str(e)}")
+            return None, None
+        
+        # Convert prediction to original label
+        original_label = label_encoders[TARGET_COLUMN].inverse_transform([pred])[0]
+        
+        # Create probability dictionary
+        probabilities = dict(zip(label_encoders[TARGET_COLUMN].classes_, pred_proba))
+        
+        # Add BMI-based validation warning if prediction differs from BMI category
         bmi_categories = {
             'Insufficient_Weight': (0, 18.5),
             'Normal_Weight': (18.5, 25),
@@ -427,30 +447,6 @@ def get_prediction(input_data, model, label_encoders, scaler, confidence_thresho
                 expected_category = category
                 break
         
-        # Ensure all required features are present
-        required_features = CATEGORICAL_FEATURES + NUMERICAL_FEATURES
-        missing_features = [f for f in required_features if f not in input_df.columns]
-        if missing_features:
-            raise ValueError(f"Missing required features: {', '.join(missing_features)}")
-        
-        # Preprocess the input data
-        input_processed = preprocess_data(input_df, label_encoders, scaler, is_training=False)
-        
-        # Ensure input data is properly shaped
-        if len(input_processed.shape) == 1:
-            input_processed = input_processed.reshape(1, -1)
-        
-        # Get prediction
-        pred = model.predict(input_processed)[0]
-        pred_proba = model.predict_proba(input_processed)[0]
-        
-        # Convert prediction to original label
-        original_label = label_encoders[TARGET_COLUMN].inverse_transform([pred])[0]
-        
-        # Create probability dictionary
-        probabilities = dict(zip(label_encoders[TARGET_COLUMN].classes_, pred_proba))
-        
-        # Add BMI-based validation warning if prediction differs from BMI category
         if expected_category and original_label != expected_category:
             st.warning(f"""
             Note: The model prediction ({original_label}) differs from the expected category based on BMI ({expected_category}).

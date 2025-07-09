@@ -25,11 +25,24 @@ def train_random_forest(X_train, y_train):
     return model
 
 def train_svm(X_train, y_train):
-    params = MODEL_PARAMS['SVM'].copy()
-    params.pop('probability', None)
-    model = SVC(**params, random_state=42, probability=True)
-    model.fit(X_train, y_train)
-    return model
+    """Train SVM model with proper probability estimation"""
+    try:
+        # Create SVM model with probability estimation
+        model = SVC(
+            kernel='rbf',
+            C=1.0,
+            gamma='scale',
+            probability=True,  # Enable probability estimation
+            random_state=42,
+            cache_size=1000  # Increase cache size for better performance
+        )
+        
+        # Fit the model
+        model.fit(X_train, y_train)
+        return model
+    except Exception as e:
+        print(f"Error training SVM model: {str(e)}")
+        return None
 
 def perform_cross_validation(model, X, y):
     cv = StratifiedKFold(**CV_PARAMS)
