@@ -108,7 +108,7 @@ streamlit run src/app.py
 
 ## Requirements
 
-- Python 3.8+
+- Python
 - scikit-learn
 - pandas
 - numpy
